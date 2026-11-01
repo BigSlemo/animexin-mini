@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101018">
+<title>AnimeXin Mini</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101018;color:#f5f4fb;font-family:Arial,sans-serif}
+.app{max-width:750px;margin:auto;padding:20px 15px 90px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{background:linear-gradient(135deg,#8b5cf6,#ec4899);padding:13px;border-radius:14px;font-weight:bold}
+h1{font-size:20px;margin:0}
+small,.muted{color:#aaa8bd}
+.hero{padding:22px;border-radius:20px;background:linear-gradient(120deg,#39235c,#1b1a2b);margin-bottom:20px}
+.hero h2{font-size:27px;margin:8px 0}
+.hero p{font-size:13px;color:#ccc}
+button{cursor:pointer;font-size:13px}
+.primary{background:#8b5cf6;color:white;border:0;padding:12px 16px;border-radius:11px;font-weight:bold}
+.search{width:100%;padding:15px;background:#222232;border:1px solid #39394b;border-radius:13px;color:white;margin:5px 0 15px;font-size:15px}
+.filters{display:flex;gap:8px;overflow-x:auto;margin-bottom:22px}
+.chip{padding:9px 14px;border-radius:30px;border:1px solid #39394b;background:#20202d;color:white;white-space:nowrap}
+.chip.active{background:#6238a0}
+h3{font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:#1c1c29;border:1px solid #303044;border-radius:15px;overflow:hidden}
+.poster{height:125px;display:flex;align-items:end;padding:12px;background:linear-gradient(135deg,#6942a0,#263e60)}
+.poster span{font-weight:bold;text-shadow:0 2px 5px black}
+.details{padding:12px}
+.details h4{font-size:13px;margin:0 0 7px}
+.details p{font-size:11px;color:#aaa8bd;margin:0 0 12px}
+.actions{display:flex;gap:6px}
+.actions button{flex:1;border:0;border-radius:8px;padding:9px 5px;background:#49306c;color:white;font-size:11px}
+.actions .save{flex:0 0 34px;background:#303040}
+.notice{margin-top:22px;padding:13px;background:#211e2c;border:1px solid #493b60;border-radius:13px;font-size:11px;color:#c8c1d5;line-height:1.6}
+nav{position:fixed;bottom:0;left:0;right:0;background:#171722;border-top:1px solid #303044;display:flex;justify-content:space-around;padding:14px}
+nav button{background:none;border:0;color:#c5bfd4}
+nav button.active{color:#c5a2ff}
+.modal{display:none;position:fixed;inset:0;background:#000b;align-items:center;justify-content:center;padding:20px}
+.modalbox{background:#242233;border:1px solid #55436d;padding:20px;border-radius:17px;max-width:400px;width:100%}
+.modalbox p{font-size:13px;color:#ccc}
+.modalbox button{margin:5px;padding:11px;border:0;border-radius:9px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+ <div class="brand">
+  <div class="logo">狐</div>
+  <div><h1>AnimeXin Mini</h1><small>Donghua discovery</small></div>
+ </div>
+ <small>BETA</small>
+</header>
+
+<section class="hero">
+ <small>YOUR DONGHUA CORNER</small>
+ <h2>Find your next cultivation journey.</h2>
+ <p>Discover your favourite Chinese animation and explore new releases.</p>
+ <button class="primary" onclick="visitSite()">Explore AnimeXin ↗</button>
+</section>
+
+<input class="search" id="search" placeholder="Search donghua..." type="search">
+
+<div class="filters" id="filters">
+ <button class="chip active" data-filter="All">All</button>
+ <button class="chip" data-filter="Action">Action</button>
+ <button class="chip" data-filter="Fantasy">Fantasy</button>
+ <button class="chip" data-filter="Ongoing">Ongoing</button>
+ <button class="chip" data-filter="Popular">Popular</button>
+</div>
+
+<h3 id="heading">Featured Donghua</h3>
+<div class="grid" id="catalogue"></div>
+
+<div class="notice">
+ <b>About this Mini App</b><br>
+ AnimeXin Mini is an unofficial discovery companion. It does not host videos or modify AnimeXin's website. Original website and video-host advertising may still appear when you visit external pages.
+</div>
+</div>
+
+<nav>
+<button class="active" data-tab="home">⌂ Home</button>
+<button data-tab="search">⌕ Search</button>
+<button data-tab="saved">♡ Saved</button>
+<button data-tab="about">ⓘ About</button>
+</nav>
+
+<div class="modal" id="modal">
+ <div class="modalbox">
+  <h3>Leaving AnimeXin Mini</h3>
+  <p>You're about to visit AnimeXin. Its own advertisements, cookies and redirects may apply.</p>
+  <button onclick="closeModal()" style="background:#393548;color:white">Cancel</button>
+  <button onclick="confirmVisit()" style="background:#8b5cf6;color:white">Continue</button>
+ </div>
+</div>
+
+<script>
+const tg=window.Telegram?.WebApp;
+tg?.ready();
+tg?.expand();
+
+const site="https://animexin.dev/";
+let target=site;
+let filter="All";
+let tab="home";
+
+const titles=[
+ {name:"Renegade Immortal",tags:["Action","Fantasy","Ongoing"],popular:true},
+ {name:"Battle Through the Heavens",tags:["Action","Fantasy","Ongoing"],popular:true},
+ {name:"Swallowed Star",tags:["Action","Sci-fi","Ongoing"],popular:true},
+ {name:"Tales of Herding Gods",tags:["Action","Fantasy","Ongoing"]},
+ {name:"Perfect World",tags:["Action","Fantasy","Ongoing"]},
+ {name:"A Record of Mortal's Journey to Immortality",tags:["Fantasy","Adventure","Ongoing"]}
+];
+
+let saved=JSON.parse(localStorage.getItem("ax_saved")||"[]");
+
+function visitSite(){
+ target=site;
+ document.getElementById("modal").style.display="flex";
+}
+function closeModal(){
+ document.getElementById("modal").style.display="none";
+}
+function confirmVisit(){
+ closeModal();
+ if(tg?.openLink) tg.openLink(target);
+ else window.open(target,"_blank","noopener,noreferrer");
+}
+
+function render(){
+ const q=document.getElementById("search").value.toLowerCase();
+ let items=titles.filter(x=>{
+  const matchesFilter=filter==="All"||
+   (filter==="Popular"?x.popular:x.tags.includes(filter));
+  return matchesFilter&&x.name.toLowerCase().includes(q);
+ });
+ if(tab==="saved")items=items.filter(x=>saved.includes(x.name));
+
+ document.getElementById("heading").textContent=
+  tab==="saved"?"Saved Donghua":"Featured Donghua";
+
+ const grid=document.getElementById("catalogue");
+ grid.innerHTML="";
+
+ if(!items.length){
+  grid.innerHTML="<p class='muted'>No titles found.</p>";
+  return;
+ }
+
+ items.forEach((x,i)=>{
+  const card=document.createElement("div");
+  card.className="card";
+
+  const poster=document.createElement("div");
+  poster.className="poster";
+  poster.style.background=
+   `linear-gradient(135deg,hsl(${i*55+250} 45% 38%),#202033)`;
+
+  const posterText=document.createElement("span");
+  posterText.textContent=x.name;
+  poster.appendChild(posterText);
+
+  const details=document.createElement("div");
+  details.className="details";
+
+  const title=document.createElement("h4");
+  title.textContent=x.name;
+
+  const info=document.createElement("p");
+  info.textContent=x.tags.join(" · ");
+
+  const actions=document.createElement("div");
+  actions.className="actions";
+
+  const open=document.createElement("button");
+  open.textContent="Explore ↗";
+  open.onclick=visitSite;
+
+  const save=document.createElement("button");
+  save.className="save";
+  save.textContent=saved.includes(x.name)?"♥":"♡";
+  save.onclick=()=>{
+   if(saved.includes(x.name))
+    saved=saved.filter(n=>n!==x.name);
+   else saved.push(x.name);
+   localStorage.setItem("ax_saved",JSON.stringify(saved));
+   render();
+  };
+
+  actions.append(open,save);
+  details.append(title,info,actions);
+  card.append(poster,details);
+  grid.appendChild(card);
+ });
+}
+
+document.getElementById("search").addEventListener("input",render);
+
+document.getElementById("filters").addEventListener("click",e=>{
+ if(!e.target.dataset.filter)return;
+ filter=e.target.dataset.filter;
+ document.querySelectorAll(".chip").forEach(b=>
+  b.classList.toggle("active",b===e.target));
+ render();
+});
+
+document.querySelectorAll("nav button").forEach(b=>{
+ b.onclick=()=>{
+  tab=b.dataset.tab;
+  document.querySelectorAll("nav button").forEach(x=>
+   x.classList.toggle("active",x===b));
+  if(tab==="search")document.getElementById("search").focus();
+  if(tab==="about"){
+   alert("AnimeXin Mini is an unofficial discovery companion. It does not host videos or remove advertisements from third-party websites.");
+   tab="home";
+   document.querySelector("[data-tab=home]").classList.add("active");
+  }
+  render();
+ };
+});
+
+render();
+</script>
+</body>
+</html>
